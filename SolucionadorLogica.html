@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>LOGIC GRID PRO - CASE MANAGER</title>
+    <style>
+        :root { --bg: #0b0d0f; --card: #161a1e; --accent: #d4af37; --text: #e0e0e0; --ok: #27ae60; --x: #e74c3c; --border: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; }
+        
+        /* PANTALLA DE CONFIGURACIÓN */
+        #setup-screen { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: 0.5s; }
+        .setup-card { background: var(--card); padding: 40px; border-radius: 15px; border: 1px solid var(--accent); width: 500px; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        .hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
+
+        /* PANTALLA DE JUEGO (DASHBOARD) */
+        #game-screen { display: grid; grid-template-columns: 300px 1fr 300px; grid-template-rows: 60px 1fr; height: 100vh; gap: 10px; padding: 10px; box-sizing: border-box; }
+        header { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding: 0 20px; }
+        
+        .side-panel { background: var(--card); border-radius: 8px; border: 1px solid var(--border); padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
+        .board-center { background: #000; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: auto; border: 1px solid #222; }
+
+        /* TABLA GRANDE */
+        table { border-collapse: separate; border-spacing: 3px; }
+        td, th { width: 65px; height: 65px; border: 1px solid #333; position: relative; transition: 0.1s; border-radius: 4px; }
+        .label { background: #1c2128; color: var(--accent); font-size: 11px; font-weight: bold; }
+        .label-v { width: 140px; text-align: right; padding-right: 12px; font-size: 13px; border-right: 3px solid var(--accent); }
+        .label-h { height: 110px; vertical-align: bottom; padding-bottom: 10px; }
+        .label-h div { transform: rotate(-90deg); width: 25px; margin: 0 auto; white-space: nowrap; }
+        
+        /* MARCAS */
+        .ok-mark { background: var(--ok) !important; color: white; box-shadow: inset 0 0 15px rgba(0,0,0,0.4); }
+        .ok-mark::after { content: "✔"; font-size: 30px; }
+        .x-mark { color: var(--x); font-size: 30px; }
+        .x-mark::after { content: "✕"; }
+
+        /* INTERFAZ */
+        input, textarea { background: #222; border: 1px solid #444; color: white; padding: 10px; width: 100%; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
+        button { background: var(--accent); color: black; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 5px; text-transform: uppercase; }
+        button:hover { filter: brightness(1.1); }
+        .clue-item { background: #1c2128; padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.85rem; border-left: 3px solid var(--accent); display: flex; gap: 8px; }
+        #timer { font-size: 24px; color: var(--accent); font-family: monospace; }
+        .saved-cases { margin-top: 15px; max-height: 150px; overflow-y: auto; }
+        .case-link { font-size: 0.8rem; padding: 5px; cursor: pointer; border-bottom: 1px solid #333; }
+        .case-link:hover { color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <div class="setup-card">
+            <h2 style="color: var(--accent); text-align:center; letter-spacing: 3px;">CONFIGURACIÓN DEL CASO</h2>
+            <label>Nombre del Escenario:</label>
+            <input type="text" id="caseName" value="Asesinato en Hollywood">
+            <label>Sospechosos:</label>
+            <input type="text" id="inS" value="Aureolina, Tercero, Obsidiana">
+            <label>Lugares:</label>
+            <input type="text" id="inL" value="Baño, Dormitorio, Cine">
+            <label>Armas:</label>
+            <input type="text" id="inA" value="Tenedor, Tubería, Vela">
+            
+            <button onclick="startGame()" style="width:100%">INICIAR INVESTIGACIÓN</button>
+            
+            <div class="saved-cases" id="casesList">
+                <small>CASOS RECIENTES:</small>
+                </div>
+        </div>
+    </div>
+
+    <div id="game-screen">
+        <header>
+            <div style="color: var(--accent); font-weight: bold; letter-spacing: 2px;" id="currentCaseTitle">CASO: ---</div>
+            <div id="timer">00:00:00</div>
+            <div>
+                <button onclick="saveCase()" style="padding: 5px 15px; font-size: 10px;">GUARDAR PROGRESO</button>
+                <button onclick="showSetup()" style="padding: 5px 15px; font-size: 10px; background: #555; color: white;">SALIR</button>
+            </div>
+        </header>
+
+        <aside class="side-panel">
+            <div id="timer-controls" style="display:flex; gap:5px; margin-bottom:15px;">
+                <button onclick="startTimer()" style="background:var(--ok); color:white">▶</button>
+                <button onclick="pauseTimer()" style="background:#f1c40f">⏸</button>
+                <button onclick="resetTimer()" style="background:var(--x); color:white">⏹</button>
+            </div>
+            <button class="btn-undo" onclick="undo()" style="background:#444; color:white; margin-bottom: 15px;">⟲ DESHACER</button>
+            
+            <div style="font-size: 0.75rem; border: 1px solid #444; padding: 10px; background: #000; color: #aaa;">
+                <b style="color: var(--accent)">MANUAL:</b><br>
+                - Click Izq: Marcar X<br>
+                - Click Der: Marcar ✔<br>
+                - El sistema deduce relaciones automáticamente.
+            </div>
+            
+            <h4 style="margin: 20px 0 10px; font-size: 0.8rem; color: var(--accent)">📝 NOTAS DE CAMPO</h4>
+            <textarea id="notes" style="flex-grow: 1; min-height: 200px; font-family: sans-serif;"></textarea>
+        </aside>
+
+        <main class="board-center">
+            <div id="board"></div>
+        </main>
+
+        <aside class="side-panel">
+            <h4 style="margin: 0 0 10px; font-size: 0.8rem; color: var(--accent)">🔍 ARCHIVO DE PISTAS</h4>
+            <div style="display:flex; gap: 5px; margin-bottom: 10px;">
+                <input type="text" id="newClue" placeholder="Nueva pista..." style="margin:0; font-size: 0.8rem;">
+                <button onclick="addClue()" style="width: 40px; margin:0;">+</button>
+            </div>
+            <div id="cluesList"></div>
+        </aside>
+    </div>
+
+    <script>
+        let S, L, A;
+        let history = [];
+        let timerSeconds = 0;
+        let timerInterval = null;
+
+        // Gestión de Escenarios
+        function startGame() {
+            S = document.getElementById('inS').value.split(',').map(x => x.trim());
+            L = document.getElementById('inL').value.split(',').map(x => x.trim());
+            A = document.getElementById('inA').value.split(',').map(x => x.trim());
+            document.getElementById('currentCaseTitle').innerText = "CASO: " + document.getElementById('caseName').value.toUpperCase();
+            document.getElementById('setup-screen').classList.add('hidden');
+            render();
+        }
+
+        function showSetup() {
+            document.getElementById('setup-screen').classList.remove('hidden');
+        }
+
+        // Timer
+        function startTimer() { if (!timerInterval) timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(); }, 1000); }
+        function pauseTimer() { clearInterval(timerInterval); timerInterval = null; }
+        function resetTimer() { pauseTimer(); timerSeconds = 0; updateTimerDisplay(); }
+        function updateTimerDisplay() {
+            const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (timerSeconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+        }
+
+        // Juego
+        function render() {
+            let html = `<table><tr><th style="border:none; background:transparent"></th>`;
+            L.forEach(x => html += `<th class="label label-h"><div>${x}</div></th>`);
+            A.forEach(x => html += `<th class="label label-h"><div>${x}</div></th>`);
+            html += `</tr>`;
+            S.forEach((p, si) => {
+                html += `<tr><th class="label label-v">${p}</th>`;
+                L.forEach((_, li) => html += `<td id="s${si}-l${li}" onclick="handle(this,'x')" oncontextmenu="handle(this,'ok',event)"></td>`);
+                A.forEach((_, ai) => html += `<td id="s${si}-a${ai}" onclick="handle(this,'x')" oncontextmenu="handle(this,'ok',event)"></td>`);
+                html += `</tr>`;
+            });
+            A.forEach((p, ai) => {
+                html += `<tr><th class="label label-v">${p}</th>`;
+                L.forEach((_, li) => html += `<td id="a${ai}-l${li}" onclick="handle(this,'x')" oncontextmenu="handle(this,'ok',event)"></td>`);
+                A.forEach(() => html += `<td style="border:none; opacity:0.1; background:#222"></td>`);
+                html += `</tr>`;
+            });
+            document.getElementById('board').innerHTML = html + `</table>`;
+        }
+
+        function handle(cell, type, e) {
+            if(e) e.preventDefault();
+            saveState();
+            if(type === 'x') { if(!cell.classList.contains('ok-mark')) cell.classList.toggle('x-mark'); }
+            else { 
+                if(cell.classList.contains('ok-mark')) cell.className = '';
+                else { cell.className = 'ok-mark'; autoFill(cell); runFullInference(); }
+            }
+        }
+
+        function autoFill(cell) {
+            const [t1, i1, t2, i2] = cell.id.match(/[a-z]|\d+/g);
+            document.querySelectorAll('td[id]').forEach(td => {
+                if(td === cell) return;
+                const [tA, iA, tB, iB] = td.id.match(/[a-z]|\d+/g);
+                if((t1==tA && i1==iA && t2==tB) || (t2==tB && i2==iB && t1==tA)) td.classList.add('x-mark');
+            });
+        }
+
+        function runFullInference() {
+            for(let si=0; si<S.length; si++){
+                for(let li=0; li<L.length; li++){
+                    for(let ai=0; ai<A.length; ai++){
+                        const sl = document.getElementById(`s${si}-l${li}`).classList.contains('ok-mark');
+                        const sa = document.getElementById(`s${si}-a${ai}`).classList.contains('ok-mark');
+                        const al = document.getElementById(`a${ai}-l${li}`);
+                        if(sl && sa && !al.classList.contains('ok-mark')) {
+                            al.className = 'ok-mark';
+                            autoFill(al);
+                        }
+                    }
+                }
+            }
+        }
+
+        function addClue() {
+            const val = document.getElementById('newClue').value;
+            if(!val) return;
+            const div = document.createElement('div');
+            div.className = 'clue-item';
+            div.innerHTML = `<input type="checkbox"> <span>${val}</span>`;
+            document.getElementById('cluesList').prepend(div);
+            document.getElementById('newClue').value = '';
+        }
+
+        function saveState() {
+            const cells = Array.from(document.querySelectorAll('td[id]')).map(td => ({ id: td.id, className: td.className }));
+            history.push(JSON.stringify({cells, notes: document.getElementById('notes').value}));
+        }
+
+        function undo() {
+            if (history.length === 0) return;
+            const state = JSON.parse(history.pop());
+            state.cells.forEach(c => document.getElementById(c.id).className = c.className);
+            document.getElementById('notes').value = state.notes;
+        }
+
+    </script>
+</body>
+</html>
