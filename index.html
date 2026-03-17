@@ -126,8 +126,18 @@
             padding: 0; 
             background: #1c2128;
             border-radius: 4px;
-            cursor: pointer;
         }
+
+        /* Solo las celdas con ID (las de juego) tienen cursor pointer */
+        td[id] { cursor: pointer; }
+
+        /* Resaltado Inteligente via CSS (más eficiente) */
+        tr:hover td { background: rgba(212, 175, 55, 0.08) !important; }
+        
+        /* Resaltado de columna mediante hack de colgroup o similar es complejo, 
+           usaremos una clase simple para la fila y JS minimalista para la columna si es necesario,
+           pero primero arreglemos la fila que es lo más crítico */
+        .highlight-row { background: rgba(212, 175, 55, 0.15) !important; }
 
         /* Este contenedor garantiza el centrado total */
         .cell-content {
@@ -379,12 +389,13 @@
         }
 
         function render() {
-            let html = `<table><tr><th style="border:none; background:transparent"></th>`;
+            let html = `<table>`;
             
             const cols = [L, A, E].filter(arr => arr.length > 0);
             const rows = [S, A, E].filter(arr => arr.length > 0);
 
-            // Cabeceras horizontales
+            // Cabecera
+            html += `<tr><th style="border:none; background:transparent"></th>`;
             cols.forEach((arr, ai) => {
                 arr.forEach((x, i) => {
                     const isFirst = ai > 0 && i === 0;
@@ -393,22 +404,21 @@
             });
             html += `</tr>`;
             
-            // Generación de filas
+            // Cuerpo
             rows.forEach((rowArr, ri) => {
                 const rowIdPrefix = ri === 0 ? 's' : (ri === 1 ? 'a' : 'e');
                 const isFirstRowOfSection = ri > 0;
                 
                 rowArr.forEach((p, i) => {
-                    html += `<tr onmouseover="toggleHighlight(this,true)" onmouseout="toggleHighlight(this,false)">`;
+                    html += `<tr>`;
                     html += `<th class="label label-v ${isFirstRowOfSection && i === 0 ? 'border-top-thick' : ''}">${p}</th>`;
                     
                     cols.forEach((colArr, ci) => {
                         const colIdPrefix = ci === 0 ? 'l' : (ci === 1 ? 'a' : 'e');
-                        
                         colArr.forEach((_, j) => {
                             const cellId = `${rowIdPrefix}${i}-${colIdPrefix}${j}`;
                             const isFirstColOfSection = ci > 0 && j === 0;
-                            const isForbidden = (rowIdPrefix === colIdPrefix); // Evitar s-s, a-a, e-e
+                            const isForbidden = (rowIdPrefix === colIdPrefix); 
                             
                             if (isForbidden) {
                                 html += `<td class="${isFirstColOfSection ? 'border-left-thick' : ''} ${isFirstRowOfSection && i === 0 ? 'border-top-thick' : ''}" style="border:none; opacity:0.1; background:#222"></td>`;
@@ -426,11 +436,6 @@
                 });
             });
             document.getElementById('board').innerHTML = html + `</table>`;
-        }
-
-        function toggleHighlight(row, active) {
-            row.classList.toggle('highlight-row', active);
-            // Podríamos añadir más lógica aquí para resaltar columnas pero requiere más DOM traversal
         }
 
         // Action Logic
