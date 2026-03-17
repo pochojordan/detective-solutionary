@@ -131,12 +131,10 @@
         /* Solo las celdas con ID (las de juego) tienen cursor pointer */
         td[id] { cursor: pointer; }
 
-        /* Resaltado Inteligente via CSS (más eficiente) */
+        /* Resaltado Inteligente via CSS */
         tr:hover td { background: rgba(212, 175, 55, 0.08) !important; }
+        .highlight-col { background: rgba(212, 175, 55, 0.08) !important; }
         
-        /* Resaltado de columna mediante hack de colgroup o similar es complejo, 
-           usaremos una clase simple para la fila y JS minimalista para la columna si es necesario,
-           pero primero arreglemos la fila que es lo más crítico */
         .highlight-row { background: rgba(212, 175, 55, 0.15) !important; }
 
         /* Este contenedor garantiza el centrado total */
@@ -420,12 +418,14 @@
                             const isFirstColOfSection = ci > 0 && j === 0;
                             const isForbidden = (rowIdPrefix === colIdPrefix); 
                             
-                            if (isForbidden) {
+                             if (isForbidden) {
                                 html += `<td class="${isFirstColOfSection ? 'border-left-thick' : ''} ${isFirstRowOfSection && i === 0 ? 'border-top-thick' : ''}" style="border:none; opacity:0.1; background:#222"></td>`;
                             } else {
                                 html += `<td id="${cellId}" 
                                     class="${isFirstColOfSection ? 'border-left-thick' : ''} ${isFirstRowOfSection && i === 0 ? 'border-top-thick' : ''}" 
                                     onclick="handle(this,'x')" 
+                                    onmouseover="highlightCol(this.cellIndex, true)"
+                                    onmouseout="highlightCol(this.cellIndex, false)"
                                     oncontextmenu="handle(this,'ok',event)">
                                     <div class="cell-content"></div>
                                 </td>`;
@@ -436,6 +436,14 @@
                 });
             });
             document.getElementById('board').innerHTML = html + `</table>`;
+        }
+
+        function highlightCol(idx, active) {
+            const cells = document.querySelectorAll('table tr');
+            cells.forEach(tr => {
+                const target = tr.cells[idx];
+                if (target) target.classList.toggle('highlight-col', active);
+            });
         }
 
         // Action Logic
