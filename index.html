@@ -167,7 +167,9 @@
 
         /* Resaltado Inteligente via CSS */
         tr:hover td { background: rgba(212, 175, 55, 0.08) !important; }
-        .highlight-col { background: rgba(212, 175, 55, 0.08) !important; }
+        /* Resaltado Inteligente via CSS - Solo celdas sin marcar ✔ */
+        tr:hover td:not(.ok-mark) { background: rgba(212, 175, 55, 0.08) !important; }
+        .highlight-col:not(.ok-mark) { background: rgba(212, 175, 55, 0.08) !important; }
         
         .highlight-row { background: rgba(212, 175, 55, 0.15) !important; }
 
@@ -205,8 +207,10 @@
         .label-h div { transform: rotate(-90deg); width: 30px; margin: 0 auto; white-space: nowrap; }
 
         /* Estados de celda */
-        .ok-mark { background: var(--ok) !important; color: white !important; }
+        /* Estados de celda - Prioridad Máxima */
+        .ok-mark { background: var(--ok) !important; color: white !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.3); }
         .x-mark .cell-content { color: var(--x) !important; font-weight: bold; }
+        .x-mark { background: #1c2128 !important; } /* Mantiene su fondo oscuro original */
 
         /* Resaltado Inteligente */
         .highlight-row { background: rgba(212, 175, 55, 0.15) !important; }
@@ -217,10 +221,40 @@
         .border-top-thick { border-top: 3px solid var(--accent) !important; }
 
         /* INTERFAZ */
+        /* INTERFAZ */
         input, textarea { background: #222; border: 1px solid #444; color: white; padding: 10px; width: 100%; border-radius: 5px; margin-bottom: 10px; box-sizing: border-box; }
+        input[type="checkbox"] { width: auto; margin-bottom: 0; cursor: pointer; }
+        
         button { background: var(--accent); color: black; border: none; padding: 12px; cursor: pointer; font-weight: bold; border-radius: 5px; text-transform: uppercase; transition: 0.2s; }
         button:hover { filter: brightness(1.2); transform: scale(1.02); }
-        .clue-item { background: #1c2128; padding: 10px; margin-bottom: 8px; border-radius: 4px; font-size: 0.9rem; border-left: 4px solid var(--accent); display: flex; gap: 10px; align-items: center; }
+        
+        .clue-item { 
+            background: #1c2128; 
+            padding: 10px 12px; 
+            margin-bottom: 4px; 
+            border-radius: 4px; 
+            font-size: 0.85rem; 
+            border-left: 3px solid var(--accent); 
+            display: flex; 
+            gap: 8px; 
+            align-items: flex-start;
+            border: 1px solid #252a31;
+        }
+        
+        .clue-item span { 
+            flex: 1; 
+            color: #ddd; 
+            line-height: 1.3; 
+            word-wrap: break-word;
+            margin-top: -2px;
+        }
+        
+        .clue-item input[type="checkbox"] { 
+            margin-top: 2px;
+            flex-shrink: 0;
+            width: 16px; 
+            height: 16px; 
+        }
         #timer { 
             font-size: 24px; 
             color: var(--accent); 
@@ -592,8 +626,8 @@
             div.className = 'clue-item';
             div.innerHTML = `
                 <input type="checkbox" ${checked ? 'checked' : ''} onclick="saveInProgress()"> 
-                <span style="flex:1">${text}</span>
-                <button onclick="this.parentElement.remove(); saveInProgress()" style="background:transparent; color:#e74c3c; border:none; padding:0; cursor:pointer; font-weight:bold; width:20px; font-size:16px;">×</button>
+                <span>${text}</span>
+                <button onclick="this.parentElement.remove(); saveInProgress()" style="background:transparent; color:#e74c3c; border:none; cursor:pointer; font-weight:bold; font-size:18px;">×</button>
             `;
             document.getElementById('cluesList').prepend(div);
         }
